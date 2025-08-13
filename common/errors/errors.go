@@ -10,5 +10,6 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrEmptyPassword      = errors.New("empty password")
 	ErrEmptyEmail         = errors.New("empty email")
-	ErrEmptyLogin         = errors.New("empty login")
+	ErrTokenExpired       = errors.New("token expired")
+	ErrInvalidToken       = errors.New("invalid token")
 )

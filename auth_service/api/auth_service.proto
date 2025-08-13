@@ -7,6 +7,7 @@ option go_package = "common/gen/auth_service";
 service AuthService {
   rpc Register (RegisterRequest) returns (RegisterResponse);
   rpc Login (LoginRequest) returns (LoginResponse);
+  rpc Refresh (RefreshRequest) returns (RefreshResponse);
 }
 
 message RegisterRequest {
@@ -15,7 +16,7 @@ message RegisterRequest {
 }
 
 message RegisterResponse {
-  int64 user_id = 1;
+  string user_id = 1;
 }
 
 message LoginRequest {
@@ -24,5 +25,16 @@ message LoginRequest {
 }
 
 message LoginResponse {
-  string token = 1;
+  string user_id = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message RefreshResponse {
+  string access_token = 1;
+  string refresh_token = 2;
 }

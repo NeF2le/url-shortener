@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/NeF2le/url-shortener/common/redis"
 	"github.com/NeF2le/url-shortener/common/storage/postgres"
 	"github.com/ilyakaznacheev/cleanenv"
 	"time"
@@ -10,11 +11,14 @@ import (
 type AuthServiceConfig struct {
 	Host string `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port int    `yaml:"port" env:"PORT" env-default:"8080"`
+
+	RedisDB int `yaml:"redis_db" env:"REDIS_DB" env-required:"true"`
 }
 
 type Config struct {
 	AuthService AuthServiceConfig `yaml:"auth_service" env-prefix:"AUTH_SERVICE_"`
 	Postgres    postgres.Config   `yaml:"postgres" env-prefix:"POSTGRES_"`
+	Redis       redis.Config      `yaml:"redis" env-prefix:"REDIS_"`
 
 	LogLevel          string        `yaml:"log_level" env:"LOG_LEVEL" env-default:"debug"`
 	JwtSecret         string        `yaml:"jwt_secret" env:"JWT_SECRET" env-required:"true"`

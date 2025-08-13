@@ -1,0 +1,5 @@
+DROP EXTENSION IF EXISTS "pgcrypto";
+
+DROP SCHEMA IF EXISTS users;
+
+DROP TABLE IF EXISTS users.users;

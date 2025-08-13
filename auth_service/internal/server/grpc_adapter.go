@@ -29,7 +29,7 @@ func (s *grpcAuthServer) Register(ctx context.Context, req *auth_service.Registe
 		return nil, errs.ErrEmptyPassword
 	}
 
-	userId, err := s.auth.Register(ctx, req.GetEmail(), req.GetPassword())
+	userID, err := s.auth.Register(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
 		if errors.Is(err, errs.ErrUserAlreadyExists) {
 			logger.GetLoggerFromCtx(ctx).Warn(ctx,
@@ -50,9 +50,9 @@ func (s *grpcAuthServer) Register(ctx context.Context, req *auth_service.Registe
 	logger.GetLoggerFromCtx(ctx).Info(ctx,
 		"user registered successfully",
 		slog.String("email", req.GetEmail()),
-		slog.Int64("userId", userId),
+		slog.String("userID", userID),
 	)
-	return &auth_service.RegisterResponse{UserId: userId}, nil
+	return &auth_service.RegisterResponse{UserId: userID}, nil
 }
 
 func (s *grpcAuthServer) Login(ctx context.Context, req *auth_service.LoginRequest) (*auth_service.LoginResponse, error) {
@@ -63,7 +63,7 @@ func (s *grpcAuthServer) Login(ctx context.Context, req *auth_service.LoginReque
 		return nil, errs.ErrEmptyPassword
 	}
 
-	token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
+	userID, accessToken, refreshToken, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
 		if errors.Is(err, errs.ErrInvalidCredentials) {
 			logger.GetLoggerFromCtx(ctx).Warn(ctx,
@@ -84,7 +84,42 @@ func (s *grpcAuthServer) Login(ctx context.Context, req *auth_service.LoginReque
 	logger.GetLoggerFromCtx(ctx).Info(ctx,
 		"user logged in successfully",
 		slog.String("email", req.GetEmail()),
-		slog.String("token", token),
+		slog.String("userID", userID),
+		slog.String("accessToken", accessToken),
+		slog.String("refreshToken", refreshToken),
 	)
-	return &auth_service.LoginResponse{Token: token}, nil
+	return &auth_service.LoginResponse{
+		UserId:       userID,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *grpcAuthServer) Refresh(ctx context.Context, req *auth_service.RefreshRequest) (*auth_service.RefreshResponse, error) {
+	if req.GetRefreshToken() == "" {
+		return nil, errs.ErrInvalidToken
+	}
+
+	accessToken, refreshToken, err := s.auth.Refresh(ctx, req.GetRefreshToken())
+	if err != nil {
+		if errors.Is(err, errs.ErrInvalidToken) {
+			logger.GetLoggerFromCtx(ctx).Warn(ctx, "invalid token",
+				slog.String("token", req.GetRefreshToken()),
+				logger.Err(err))
+			return nil, errs.ErrInvalidToken
+		}
+		if errors.Is(err, errs.ErrTokenExpired) {
+			logger.GetLoggerFromCtx(ctx).Warn(ctx, "token expired",
+				slog.String("token", req.GetRefreshToken()),
+				logger.Err(err))
+			return nil, errs.ErrTokenExpired
+		}
+		logger.GetLoggerFromCtx(ctx).Error(ctx,
+			"failed to refresh token",
+			slog.String("refreshToken", req.GetRefreshToken()),
+			logger.Err(err))
+		return nil, status.Errorf(codes.Unauthenticated, "%v", err)
+	}
+
+	return &auth_service.RefreshResponse{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }

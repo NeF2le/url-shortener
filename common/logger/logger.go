@@ -11,6 +11,7 @@ type key string
 const (
 	KeyForLogger    key = "logger"
 	KeyForRequestID key = "request_id"
+	KeyForLogLevel  key = "log_level"
 )
 
 type Logger struct {
@@ -35,7 +36,7 @@ func NewLogger(logLevel string) *Logger {
 }
 
 func New(ctx context.Context) context.Context {
-	logLevel, ok := ctx.Value("log_level").(string)
+	logLevel, ok := ctx.Value(KeyForLogLevel).(string)
 	if !ok {
 		logLevel = "debug"
 	}

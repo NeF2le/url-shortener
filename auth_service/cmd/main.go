@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"github.com/NeF2le/url-shortener/auth_service/internal/adapters/cache"
+	"github.com/NeF2le/url-shortener/auth_service/internal/adapters/storage"
 	"github.com/NeF2le/url-shortener/auth_service/internal/config"
-	"github.com/NeF2le/url-shortener/auth_service/internal/ports/adapters/storage"
 	"github.com/NeF2le/url-shortener/auth_service/internal/server"
 	"github.com/NeF2le/url-shortener/auth_service/internal/service"
 	"github.com/NeF2le/url-shortener/common/logger"
-	"github.com/NeF2le/url-shortener/common/storage/sqlite"
+	"github.com/NeF2le/url-shortener/common/redis"
+	"github.com/NeF2le/url-shortener/common/storage/postgres"
 	"log"
 )
 
@@ -17,24 +19,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ctx := context.WithValue(context.Background(), "log_level", cfg.LogLevel)
+	ctx := context.WithValue(context.Background(), logger.KeyForLogLevel, cfg.LogLevel)
 	ctx = logger.New(ctx)
 
-	sqlitePath := "/Users/nef1le/Desktop/url-shortener/storage/sqlite/url-shortener.db"
-	sqliteClient, err := sqlite.NewStorageSQLite(sqlitePath)
+	postgresClient, err := postgres.NewPostgresClient(ctx, &cfg.Postgres)
+	if err != nil {
+		log.Fatal(err)
+	}
+	redisClient, err := redis.NewRedisClient(ctx, &cfg.Redis, cfg.AuthService.RedisDB)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = sqlite.Migrate(sqlitePath, cfg.MigrationPath, "migrations")
+	err = postgres.Migrate(&cfg.Postgres, cfg.MigrationPath, "migrations")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	storageAdapter := storage.NewAuthSQLiteAdapter(sqliteClient)
+	storageAdapter := storage.NewAuthPostgresAdapter(postgresClient)
+	cacheAdapter := cache.NewAuthRedisAdapter(redisClient, cfg.RefreshExpiration, cfg.AccessExpiration)
 
 	authService := service.NewAuthService(
 		storageAdapter,
+		cacheAdapter,
 		cfg.JwtSecret,
 		cfg.RefreshExpiration,
 		cfg.AccessExpiration,
